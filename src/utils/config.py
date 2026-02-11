@@ -52,7 +52,7 @@ class DriftWatchConfig:
     #   0.1  to 0.2    -> low drift, monitor closely
     #   0.2  to 0.3    -> moderate drift, consider retraining
     #   > 0.3          -> severe drift, retrain immediately
-    
+
     psi_none: float = field(default_factory=lambda: _env_float("PSI_NONE", 0.1))
     psi_low: float = field(default_factory=lambda: _env_float("PSI_LOW", 0.2))
     psi_moderate: float = field(default_factory=lambda: _env_float("PSI_MODERATE", 0.3))
@@ -63,7 +63,7 @@ class DriftWatchConfig:
     # Kolmogorov-Smirnov test p-value:
     #   p > 0.05  -> distributions are similar (no drift)
     #   p < 0.05  -> distributions differ significantly (drift)
-    
+
     ks_significance_level: float = field(
         default_factory=lambda: _env_float("KS_SIGNIFICANCE_LEVEL", 0.05)
     )
@@ -74,7 +74,7 @@ class DriftWatchConfig:
     # Options: "moderate" or "severe"
     # "moderate" = more aggressive (heals sooner)
     # "severe"   = more conservative (only heals on major drift)
-    
+
     healing_trigger_severity: str = field(
         default_factory=lambda: _env_str("HEALING_TRIGGER_SEVERITY", "moderate")
     )
@@ -86,7 +86,7 @@ class DriftWatchConfig:
     # This catches concept drift (data looks the same but labels changed).
     #
     # 0.05 = flag if accuracy drops by more than 5%
-    
+
     accuracy_drop_threshold: float = field(
         default_factory=lambda: _env_float("ACCURACY_DROP_THRESHOLD", 0.05)
     )
@@ -108,7 +108,7 @@ class DriftWatchConfig:
     # Number of samples to use for SHAP explanations.
     # SHAP used for diagnosis - is slow so we can't use whole data set
     # Sampling keeps diagnosis fast while still being representative
-    
+
     shap_sample_size: int = field(
         default_factory=lambda: _env_int("SHAP_SAMPLE_SIZE", 100)
     )
@@ -118,7 +118,7 @@ class DriftWatchConfig:
     # How many recent data points to use when retraining a challenger.
     # Too small = challenger undertrained
     # Too large = includes stale data from before the drift
-    
+
     retrain_window_size: int = field(
         default_factory=lambda: _env_int("RETRAIN_WINDOW_SIZE", 5000)
     )
@@ -128,7 +128,7 @@ class DriftWatchConfig:
     # Number of bins to use when computing PSI.
     # More bins = more sensitive to small distribution changes
     # Fewer bins = more robust but less granular
-    
+
     psi_num_bins: int = field(
         default_factory=lambda: _env_int("PSI_NUM_BINS", 10)
     )
