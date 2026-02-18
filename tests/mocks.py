@@ -1,4 +1,4 @@
-# DriftWatch - Mock model for testing.
+# DriftRx - Mock model for testing.
 
 from __future__ import annotations
 

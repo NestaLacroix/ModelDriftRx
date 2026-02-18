@@ -16,7 +16,7 @@ pip-delete-this-directory.txt
 # Virtual environments
 .venv/
 venv/
-ENV/
+ENV/conda activate mdw
 env/
 
 # Testing

@@ -1,5 +1,5 @@
 """
-DriftWatch - Core Data Contracts
+DriftRx - Core Data Contracts
 
 Every component in the system communicates through these dataclasses:
 

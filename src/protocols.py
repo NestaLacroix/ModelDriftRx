@@ -1,5 +1,5 @@
 """
-DriftWatch - Model Interface Protocol
+DriftRx - Model Interface Protocol
 
 Defines the contract any model must satisfy to be monitored.
 """

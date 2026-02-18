@@ -1,5 +1,5 @@
 """
-DriftWatch — Central Configuration
+DriftRx — Central Configuration
 
 All thresholds, paths, and settings live here. Nothing is hardcoded
 anywhere else in the project. Values are loaded from environment
@@ -38,9 +38,9 @@ def _env_str(key: str, default: str) -> str:
 
 
 @dataclass(frozen=True)
-class DriftWatchConfig:
+class DriftRxConfig:
     """
-    Immutable configuration for the entire DriftWatch system.
+    Immutable configuration for the entire DriftRx system.
     Frozen so nothing can accidentally mutate thresholds at runtime.
     All values can be overridden via environment variables.
     """
@@ -154,7 +154,7 @@ class DriftWatchConfig:
         default_factory=lambda: _env_str("MLFLOW_TRACKING_URI", "file:./mlruns")
     )
     mlflow_experiment_name: str = field(
-        default_factory=lambda: _env_str("MLFLOW_EXPERIMENT_NAME", "driftwatch")
+        default_factory=lambda: _env_str("MLFLOW_EXPERIMENT_NAME", "DriftRx")
     )
 
     # Utility Methods:
@@ -171,4 +171,4 @@ class DriftWatchConfig:
 
 # Singleton:
 # everywhere else: from src.utils.config import CONFIG
-CONFIG = DriftWatchConfig()
+CONFIG = DriftRxConfig()

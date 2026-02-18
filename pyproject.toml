@@ -96,7 +96,7 @@ reports = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/NestaLacroix/ModelDriftWatch.git"
+Homepage = "https://github.com/NestaLacroix/ModelDriftRx.git"
 
 # ============================================================================
 # Package Discovery
