@@ -7,7 +7,7 @@ per feature to see if there is distribution drift.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import numpy as np
 from scipy import stats
@@ -61,7 +61,7 @@ class DriftDetector:
             incoming_col = incoming[:, i]
 
             psi = self._compute_psi(baseline_col, incoming_col)
-            ks_stat, ks_p = stats.ks_2samp(baseline_col, incoming_col)
+            _, ks_p = stats.ks_2samp(baseline_col, incoming_col)
             severity = self._classify_severity(psi, ks_p)
 
             if severity > worst_severity:
@@ -80,7 +80,7 @@ class DriftDetector:
         triggered = worst_severity >= CONFIG.healing_trigger_severity
 
         return DriftReport(
-            timestamp=datetime.now(tz=timezone.utc),
+            timestamp=datetime.now(tz=UTC),
             overall_severity=worst_severity,
             feature_drifts=feature_drifts,
             triggered_healing=triggered,
