@@ -40,3 +40,33 @@ components.
 - `tests/mocks.py` - FakeModel for testing without real ML frameworks
 - `tests/conftest.py` - Shared pytest fixtures
 - `tests/unit/test_contracts.py` - Tests for all contracts and edge cases
+
+---
+
+### Phase 2 - Drift Detection
+
+**Goal:** Build the component that compares incoming data against a baseline and determines
+if distribution shift has occurred.
+
+**What was built:**
+
+`src/detector.py` - The DriftDetector class. Takes baseline data and incoming data as numpy
+arrays. For each feature column, it computes:
+
+- PSI: Measures how much the distribution has shifted. Splits both distributions into bins 
+  and compares the proportions. Low PSI means stable, high PSI means the data has changed 
+  significantly.
+
+- KS Test: A statistical hypothesis test that determines whether two samples come from the 
+  same distribution. Returns a p-value. Low p-value means the distributions are different.
+
+The detector combines both metrics to assign a DriftSeverity to each feature, then produces
+a DriftReport containing all the per-feature results.
+
+Controlled by config.py
+
+`tests/unit/test_detector.py` - Tests using the sample_baseline_data and sample_drifted_data
+fixtures from conftest. Verifies that feature_0 (big shift) is flagged as severe, feature_1
+(small shift) is flagged as low, and features 2-9 (no shift) are flagged as none.
+
+---
