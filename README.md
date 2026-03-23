@@ -85,3 +85,20 @@ Uses SHAP to compute feature importance scores. Then cross-references importance
 that high-importance drifted features rank above low-importance ones.
 
 ---
+
+### Phase 4 - Self Healing
+
+**Goal:** Automatically retrain a challenger model on recent data and decide whether to
+promote it or keep the current champion.
+
+**What will be built:**
+
+`src/healer.py` - The Healer class. Takes a DiagnosisResult, the current champion model,
+and training data. Calls retrain() on the model to produce a challenger. Evaluates both
+champion and challenger on the same holdout set, comparing the two. The promotion decision uses a configurable threshold from config.py. The challenger must beat the champion by at least that margin (default 2% accuracy) to be promoted. Produces a HealingOutcome with both sets of metrics, the action taken (PROMOTE, ROLLBACK, or NO_ACTION), and a human-readable reason for the decision.
+
+`tests/unit/test_healer.py` - Tests three scenarios: challenger wins (promote), challenger
+loses (rollback), challenger wins by less than the threshold (no action). Uses FakeModel
+with different accuracy configurations for each scenario.
+
+---
