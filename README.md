@@ -70,3 +70,18 @@ fixtures from conftest. Verifies that feature_0 (big shift) is flagged as severe
 (small shift) is flagged as low, and features 2-9 (no shift) are flagged as none.
 
 ---
+
+### Phase 3 - Drift Diagnosis
+
+**Goal:** Once drift is detected, figure out why. Which features matter most to the model,
+and which of those have drifted the hardest.
+
+**What was built:**
+
+`src/diagnoser.py` - The DriftDiagnoser class. Takes a DriftReport and the current model.
+Uses SHAP to compute feature importance scores. Then cross-references importance with drift severity.
+
+`tests/unit/test_diagnoser.py` - Tests using FakeModel and pre-built DriftReports. Verifies
+that high-importance drifted features rank above low-importance ones.
+
+---
