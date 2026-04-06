@@ -102,3 +102,26 @@ loses (rollback), challenger wins by less than the threshold (no action). Uses F
 with different accuracy configurations for each scenario.
 
 ---
+
+### Phase 5 - Reporting and Visualization
+
+**Goal:** Generate human-readable incident reports and charts summarizing what happened.
+
+**What was built:**
+
+`src/reporter.py` - The Reporter class. Takes a HealingOutcome and produces an IncidentReport.
+Generates a text summary describing the full incident (what drifted, by how much, what the
+model did about it, what the result was). Generates matplotlib/seaborn charts:
+
+- Drift bar chart: PSI scores per feature, color-coded by severity
+- Distribution comparison: baseline vs current distribution for drifted features
+- Champion vs challenger: side-by-side metric comparison
+
+Saves charts to the reports/ directory and records their file paths in the IncidentReport
+charts dict.
+
+`tests/unit/test_reporter.py` - Tests summary text generation (does it mention the right
+features, the right numbers). Tests that chart file paths are populated. Tests edge cases
+like no drift detected (should produce a clean report saying everything is fine).
+
+---

@@ -1,7 +1,7 @@
 .PHONY: help install lint format type-check test test-fast test-cov \
         run-api run-dashboard run-mlflow demo clean docker-up docker-down
 
-# Default — show help
+# Default - show help
 help:
 	@echo ""
 	@echo "  Model Drift Watch"
