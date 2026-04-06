@@ -125,3 +125,25 @@ features, the right numbers). Tests that chart file paths are populated. Tests e
 like no drift detected (should produce a clean report saying everything is fine).
 
 ---
+
+### Phase 6 - FastAPI Service
+
+**Goal:** Expose the monitoring system as a lightweight REST API for programmatic
+integration, automated testing, and a backend for the dashboard.
+
+**What was built:**
+
+- `api/main.py` - FastAPI application with lifespan startup logic and CORS middleware.
+- `api/schemas.py` - Pydantic v2 request/response models that drive OpenAPI docs.
+- `api/state.py` - Small in-memory `AppState` holder and dependency for runtime state.
+- `api/routers/*.py` - Router modules exposing the core endpoints:
+  - `POST /predict` - run batch inference against the loaded champion model
+  - `GET /health` - service status (model/baseline loaded, last check, incident count)
+  - `POST /check-drift` - run detector against uploaded feature batches
+  - `GET /incidents` and `GET /incidents/{id}` - incident summaries and details
+- `tests/e2e/test_api.py` - end-to-end API tests (FastAPI TestClient + `FakeModel`) that
+  exercise the endpoints and verify response contracts.
+
+Notes: the API is developer-focused (UI at `/docs`) and returns realistic
+results when `AppState` is populated by the demo or a loader script.
+---
