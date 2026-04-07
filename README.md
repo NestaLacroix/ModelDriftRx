@@ -1,5 +1,28 @@
 # ModelDriftRx
-Detect that your model is dying, it diagnoses why, fixes itself, and proves the fix worked, all autonomously. Think of it as an immune system for ML models. Will feature a dashboard to monitor model health and more, development in progress
+Detect that your model is dying, it diagnoses why, fixes itself, and proves the fix worked, all autonomously. Think of it as an immune system for ML models. Will feature a dashboard to monitor model health and more, development in progress...
+
+## Development - current state & how to run
+
+The core detection/diagnosis/healing pipeline is implemented and exposed via a FastAPI backend; a Streamlit dashboard provides a visual front-end that consumes the API. To run the current stack locally:
+
+- Install dependencies (use the environment of your choice and install dev extras from `pyproject.toml`).
+- Start the API service:
+
+  `make run-api` runs FastAPI on http://localhost:8000
+
+- Start the dashboard frontend:
+
+  `make run-dashboard` or `streamlit run dashboard/app.py` runs Dashboard on http://localhost:8501
+
+
+Notes: the dashboard falls back to deterministic synthetic data when the API is unreachable so it is always runnable for demos.
+
+**Brief description of the AI "immune system" underneath**
+
+- **Detect:** the detector compares incoming data to a baseline and computes per-feature metrics (PSI and KS p-value) to flag distribution shifts.
+- **Diagnose:** the diagnoser ranks features by model importance (SHAP) and cross-references importance with drift severity to prioritise likely root causes.
+- **Fix (Self-heal):** the healer retrains a challenger model on recent data, evaluates on a holdout set, and decides to `PROMOTE`, `ROLLBACK`, or take `NO_ACTION` based on a configurable improvement threshold.
+- **Prove & Report:** the reporter generates human-readable incident summaries and charts (PSI bars, distribution comparisons, champion vs challenger) which are stored with the incident for auditing and review. All viewable on the dashboard.
 
 ## Implementation Phases
 
@@ -146,4 +169,28 @@ integration, automated testing, and a backend for the dashboard.
 
 Notes: the API is developer-focused (UI at `/docs`) and returns realistic
 results when `AppState` is populated by the demo or a loader script.
+
+---
+
+### Phase 7 - Streamlit Dashboard
+
+**Goal:** Provide a lightweight, interactive UI to monitor model health, inspect recent
+drift checks, and review self-healing outcomes.
+
+**What was built:**
+
+- `dashboard/app.py` — Streamlit app with four main pages:
+  - **Health Overview:** service/model status, KPI cards, latest drift snapshot (PSI bar chart) and an action-distribution donut.
+  - **Drift Timeline:** multi-feature PSI timeline (area chart) and the most-recent check's feature table.
+  - **Incidents:** full incident history with expandable summaries and (when the API is online) detailed healing outcomes.
+  - **Champion vs Challenger:** grouped bar chart comparing metrics, decision card, and a metric-level delta table.
+
+- Sidebar controls: editable `API URL` (overrides `DRIFTRX_API_URL`), manual `Refresh` button, and an **Auto-refresh** toggle (fixed 30s interval; enabled by default).
+
+- Dashboard fetches data from the FastAPI backend when available, and falls back to deterministic synthetic demo data when the API is unreachable so the UI is always runnable.
+
+- Components: reusable Plotly chart generators (`psi_bar_chart`, `drift_timeline_chart`, `champion_challenger_chart`, `action_donut`), CSS theme and KPI/badge helpers in `dashboard/components`.
+
+Notes: the dashboard is intentionally decoupled from the monitoring internals - it consumes the API and presents human-friendly visualisations.
+
 ---
