@@ -1,5 +1,5 @@
 """
-DriftRx — Central Configuration
+DriftRx - Central Configuration
 
 All thresholds, paths, and settings live here. Nothing is hardcoded
 anywhere else in the project. Values are loaded from environment
@@ -37,6 +37,14 @@ def _env_int(key: str, default: int) -> int:
 def _env_str(key: str, default: str) -> str:
     """Read a string from environment variables, falling back to default."""
     return os.getenv(key, default)
+
+
+def _env_bool(key: str, default: bool) -> bool:
+    """Read a boolean from environment variables, falling back to default."""
+    value = os.getenv(key)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 @dataclass(frozen=True)
@@ -156,10 +164,16 @@ class DriftRxConfig:
     # MLflow:
 
     mlflow_tracking_uri: str = field(
-        default_factory=lambda: _env_str("MLFLOW_TRACKING_URI", "file:./mlruns")
+        default_factory=lambda: _env_str("MLFLOW_TRACKING_URI", "sqlite:///mlflow.db")
     )
     mlflow_experiment_name: str = field(
         default_factory=lambda: _env_str("MLFLOW_EXPERIMENT_NAME", "DriftRx")
+    )
+    mlflow_registry_name: str = field(
+        default_factory=lambda: _env_str("MLFLOW_REGISTRY_NAME", "DriftRxModel")
+    )
+    mlflow_enabled: bool = field(
+        default_factory=lambda: _env_bool("MLFLOW_ENABLED", False)
     )
 
     # Aliases (used by detector.py):

@@ -23,6 +23,7 @@ Notes: the dashboard falls back to deterministic synthetic data when the API is 
 - **Diagnose:** the diagnoser ranks features by model importance (SHAP) and cross-references importance with drift severity to prioritise likely root causes.
 - **Fix (Self-heal):** the healer retrains a challenger model on recent data, evaluates on a holdout set, and decides to `PROMOTE`, `ROLLBACK`, or take `NO_ACTION` based on a configurable improvement threshold.
 - **Prove & Report:** the reporter generates human-readable incident summaries and charts (PSI bars, distribution comparisons, champion vs challenger) which are stored with the incident for auditing and review. All viewable on the dashboard.
+- **Track:** optional MLflow integration records healing metrics, decisions, incident tags, and chart artifacts. Promoted challengers are registered in the MLflow Model Registry when `MLFLOW_ENABLED=true`.
 
 ## Implementation Phases
 
@@ -194,3 +195,72 @@ drift checks, and review self-healing outcomes.
 Notes: the dashboard is intentionally decoupled from the monitoring internals - it consumes the API and presents human-friendly visualisations.
 
 ---
+
+### Phase 8 - MLflow Integration
+
+**Goal:** Track retraining decisions, model metrics, promoted model versions, and incident
+artifacts in MLflow while keeping MLflow optional for local development and deployments.
+
+**What was built:**
+
+- `src/utils/config.py` - MLflow settings loaded from environment variables:
+  `MLFLOW_ENABLED`, `MLFLOW_TRACKING_URI`, `MLFLOW_EXPERIMENT_NAME`, and
+  `MLFLOW_REGISTRY_NAME`. Tracking is disabled by default.
+- `src/utils/mlflow.py` - Lazy `MLflowTracker` that records healing and incident runs. The
+  monitoring pipeline continues working when MLflow is disabled, not installed, or unavailable.
+- `src/healer.py` - Logs champion and challenger accuracy, F1, precision, recall, loss, custom
+  metrics, improvement, action, and decision reason. Promoted challengers are logged through an
+  MLflow `pyfunc` adapter and registered in the Model Registry.
+- `src/reporter.py` - Logs incident ID, action, severity, and generated chart artifacts. The
+  resulting MLflow run ID is retained on the incident report.
+- `src/contracts.py`, `api/schemas.py`, and `api/routers/history.py` - Preserve and expose
+  `mlflow_run_id` through incident serialization and API responses.
+- `tests/unit/test_mlflow.py` - Tests disabled tracking, metric logging, custom metrics,
+  promotion registration, enum actions, incident tags, and chart artifacts with a fake MLflow
+  client.
+
+**Configuration:**
+
+Copy the MLflow values from `.env.example` into `.env` when tracking is wanted:
+
+```text
+MLFLOW_ENABLED=true
+MLFLOW_TRACKING_URI=file:./mlruns
+MLFLOW_EXPERIMENT_NAME=DriftRx
+MLFLOW_REGISTRY_NAME=DriftRxModel
+```
+
+The default `MLFLOW_ENABLED=false` setting means existing tests and application workflows do not
+require an MLflow server. MLflow errors are non-fatal and never prevent detection, healing, or
+report generation.
+
+**How to test it:**
+
+Run the automated Phase 8 tests:
+
+```powershell
+pytest -q tests/unit/test_mlflow.py
+```
+
+Run the complete regression suite:
+
+```powershell
+pytest -q
+```
+
+To verify real local MLflow tracking, install the project dependencies, enable tracking, and
+start the MLflow UI in a separate terminal:
+
+```powershell
+pip install -e ".[dev]"
+$env:MLFLOW_ENABLED="true"
+$env:MLFLOW_TRACKING_URI="sqlite:///mlflow.db"
+$env:MLFLOW_EXPERIMENT_NAME="DriftRx"
+$env:MLFLOW_REGISTRY_NAME="DriftRxModel"
+mlflow ui --host 127.0.0.1 --port 5000
+```
+
+Open `http://127.0.0.1:5000` to inspect the `DriftRx` experiment. A healing comparison creates a
+run with champion/challenger metrics; a promoted challenger also creates a registered model.
+Generated incident charts appear as run artifacts. The same environment variables must be set
+in the terminal that starts the API or runs the healing workflow.

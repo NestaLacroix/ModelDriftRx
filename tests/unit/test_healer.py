@@ -3,6 +3,15 @@ import numpy as np
 from src.healer import Healer
 
 
+class RecordingTracker:
+    def __init__(self):
+        self.outcome = None
+
+    def log_healing(self, outcome):
+        self.outcome = outcome
+        return "run-123"
+
+
 class FakeModel:
     """
     Simple test double implementing evaluate(x, y) and retrain(x, y).
@@ -60,3 +69,17 @@ def test_no_action_when_improvement_below_threshold():
     outcome = healer.heal(x_train, y_train, x_holdout, y_holdout)
     assert outcome.action == "NO_ACTION"
     assert 0 <= (outcome.challenger_metrics.accuracy - outcome.champion_metrics.accuracy) < 0.02
+
+
+def test_healing_logs_decision_and_keeps_run_id():
+    champion = FakeModel(base_accuracy=0.80, retrain_delta=0.05)
+    tracker = RecordingTracker()
+    healer = Healer(champion, tracker=tracker)
+    x_train, y_train = make_dummy_data()
+    x_holdout, y_holdout = make_dummy_data()
+
+    outcome = healer.heal(x_train, y_train, x_holdout, y_holdout)
+
+    assert tracker.outcome is outcome
+    assert outcome.action == "PROMOTE"
+    assert outcome.mlflow_run_id == "run-123"

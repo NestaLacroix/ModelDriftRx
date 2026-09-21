@@ -1,5 +1,5 @@
 """
-DriftRx API — Pydantic request / response schemas.
+DriftRx API - Pydantic request / response schemas.
 
 All data entering or leaving the API is validated through these models.
 Using Pydantic v2 syntax throughout.
@@ -85,6 +85,7 @@ class IncidentSummary(BaseModel):
     timestamp: str          # ISO-8601
     action: str             # "promote" | "rollback" | "no_action"
     summary: str
+    mlflow_run_id: str | None = None
 
 
 class IncidentDetail(BaseModel):
@@ -93,4 +94,5 @@ class IncidentDetail(BaseModel):
     summary: str
     charts: dict[str, str]
     healing_outcome: dict[str, Any]
+    mlflow_run_id: str | None = None
 

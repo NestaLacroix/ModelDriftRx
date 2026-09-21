@@ -114,11 +114,6 @@ include = ["src*", "api*", "dashboard*"]
 target-version = "py311"
 line-length = 88
 src = ["src", "api", "dashboard", "tests"]
-per-file-ignores = {
-    "dashboard/app.py" = ["E402"],
-    "dashboard/components/charts.py" = ["B905", "E741"],
-    "dashboard/pages/champion_challenger.py" = ["B905", "F841"],
-}
 
 [tool.ruff.lint]
 select = [
@@ -136,6 +131,11 @@ ignore = [
     "E501",     # line too long — formatter handles this
     "B008",     # do not perform function call in argument defaults (needed for FastAPI Depends())
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"dashboard/app.py" = ["E402"]
+"dashboard/components/charts.py" = ["B905", "E741"]
+"dashboard/pages/champion_challenger.py" = ["B905", "F841"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["src", "api", "dashboard"]

@@ -28,6 +28,7 @@ def list_incidents(state: AppState = Depends(get_state)) -> list[IncidentSummary
                 timestamp=inc["timestamp"],
                 action=inc["healing_outcome"]["action"],
                 summary=inc["summary"],
+                mlflow_run_id=inc.get("mlflow_run_id"),
             )
         )
     return result
@@ -47,6 +48,7 @@ def get_incident(
                 summary=inc["summary"],
                 charts=inc.get("charts", {}),
                 healing_outcome=inc["healing_outcome"],
+                mlflow_run_id=inc.get("mlflow_run_id"),
             )
     raise HTTPException(
         status_code=404,

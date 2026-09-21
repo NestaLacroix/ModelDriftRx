@@ -30,6 +30,15 @@ from src.reporter import Reporter
 # Helpers
 # ---------------------------------------------------------------------------
 
+class RecordingTracker:
+    def __init__(self):
+        self.report = None
+
+    def log_incident(self, report):
+        self.report = report
+        return "incident-run-123"
+
+
 def _make_outcome(
     action: HealAction = HealAction.PROMOTE,
     champion_acc: float = 0.78,
@@ -305,3 +314,13 @@ def test_generate_with_conftest_fixtures(tmp_path, sample_healing_promote):
     assert report.summary
     assert "drift_bar" in report.charts
     assert "champion_vs_challenger" in report.charts
+
+
+def test_generate_logs_incident_after_charts_are_created(tmp_path):
+    tracker = RecordingTracker()
+    reporter = Reporter(reports_dir=str(tmp_path), tracker=tracker)
+
+    report = reporter.generate(_make_outcome())
+
+    assert tracker.report is report
+    assert tracker.report.charts

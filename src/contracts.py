@@ -247,6 +247,7 @@ class IncidentReport:
     summary: str                                          # plain English paragraph
     charts: dict[str, str] = field(default_factory=dict)  # Later will have driftplot.png
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    mlflow_run_id: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -255,4 +256,5 @@ class IncidentReport:
             "timestamp": self.timestamp.isoformat(),
             "summary": self.summary,
             "charts": self.charts,
+            "mlflow_run_id": self.mlflow_run_id,
         }

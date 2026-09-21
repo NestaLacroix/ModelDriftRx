@@ -31,6 +31,7 @@ from src.contracts import (
     IncidentReport,
 )
 from src.utils.config import CONFIG
+from src.utils.mlflow import MLflowTracker
 
 # Severity → bar color mapping
 _SEVERITY_COLORS: dict[DriftSeverity, str] = {
@@ -54,9 +55,14 @@ class Reporter:
                                    feature_names=names)
     """
 
-    def __init__(self, reports_dir: str | None = None) -> None:
+    def __init__(
+        self,
+        reports_dir: str | None = None,
+        tracker: MLflowTracker | None = None,
+    ) -> None:
         self._reports_dir = Path(reports_dir if reports_dir is not None else CONFIG.reports_dir)
         self._reports_dir.mkdir(parents=True, exist_ok=True)
+        self._tracker = tracker or MLflowTracker()
 
     # ---------------------------------------------------------------------- public
 
@@ -82,12 +88,14 @@ class Reporter:
         """
         summary = self._build_summary(outcome)
         charts = self._generate_charts(outcome, baseline, current, feature_names)
-        return IncidentReport(
+        report = IncidentReport(
             healing_outcome=outcome,
             timestamp=datetime.now(tz=UTC),
             summary=summary,
             charts=charts,
         )
+        report.mlflow_run_id = self._tracker.log_incident(report)
+        return report
 
     # -------------------------------------------------------------------- private
 

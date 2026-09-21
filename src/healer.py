@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from src.utils.config import CONFIG
+from src.utils.mlflow import MLflowTracker
 
 
 @dataclass
@@ -32,11 +33,18 @@ class HealingOutcome:
     reason: str
     champion: Any
     challenger: Any
+    mlflow_run_id: str | None = None
+    input_example: Any = None
 
 
 class Healer:
-    def __init__(self, champion_model: Any) -> None:
+    def __init__(
+        self,
+        champion_model: Any,
+        tracker: MLflowTracker | None = None,
+    ) -> None:
         self.champion = champion_model
+        self._tracker = tracker or MLflowTracker()
 
     def _extract_accuracy(self, metrics: Any) -> float:
         """
@@ -128,6 +136,9 @@ class Healer:
             reason=reason,
             champion=self.champion,
             challenger=challenger,
+            input_example=x_holdout[:1],
         )
+
+        outcome.mlflow_run_id = self._tracker.log_healing(outcome)
 
         return outcome
