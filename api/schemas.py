@@ -39,6 +39,9 @@ class HealthResponse(BaseModel):
     baseline_loaded: bool
     last_drift_check: str | None    # ISO-8601 timestamp or null
     incident_count: int
+    model_name: str | None = None
+    model_path: str | None = None
+    feature_names: list[str] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +74,9 @@ class FeatureDriftOut(BaseModel):
 class DriftCheckResponse(BaseModel):
     timestamp: str          # ISO-8601
     overall_severity: str
-    triggered_healing: bool
+    triggered_healing: bool  # Drift crossed the configured healing threshold.
+    healing_started: bool    # True only when the Healer has actually been called.
+    healing_status: str      # "not_started" until orchestration is connected.
     feature_drifts: list[FeatureDriftOut]
 
 

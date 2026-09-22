@@ -83,5 +83,7 @@ def check_drift(
         timestamp=report.timestamp.isoformat(),
         overall_severity=report.overall_severity.value,
         triggered_healing=report.triggered_healing,
+        healing_started=False,
+        healing_status="not_started",
         feature_drifts=feature_drifts_out,
     )

@@ -19,6 +19,7 @@ from api.routers.drift import router as drift_router
 from api.routers.health import router as health_router
 from api.routers.history import router as history_router
 from api.routers.predict import router as predict_router
+from api.state import get_state, load_example_model
 from src.utils.config import CONFIG
 
 
@@ -26,6 +27,7 @@ from src.utils.config import CONFIG
 async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     """Create required directories on startup; nothing special on shutdown."""
     CONFIG.ensure_directories()
+    load_example_model(get_state())
     yield
 
 

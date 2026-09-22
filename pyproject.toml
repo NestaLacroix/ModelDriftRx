@@ -104,7 +104,7 @@ Homepage = "https://github.com/NestaLacroix/ModelDriftRx.git"
 # ============================================================================
 
 [tool.setuptools.packages.find]
-include = ["src*", "api*", "dashboard*"]
+include = ["src*", "api*", "dashboard*", "example_model*"]
 
 # ============================================================================
 # Ruff — Linting + Formatting (replaces flake8, isort, black)

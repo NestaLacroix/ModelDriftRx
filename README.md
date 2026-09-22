@@ -225,7 +225,7 @@ Copy the MLflow values from `.env.example` into `.env` when tracking is wanted:
 
 ```text
 MLFLOW_ENABLED=true
-MLFLOW_TRACKING_URI=file:./mlruns
+MLFLOW_TRACKING_URI=sqlite:///mlflow.db
 MLFLOW_EXPERIMENT_NAME=DriftRx
 MLFLOW_REGISTRY_NAME=DriftRxModel
 ```
@@ -264,3 +264,104 @@ Open `http://127.0.0.1:5000` to inspect the `DriftRx` experiment. A healing comp
 run with champion/challenger metrics; a promoted challenger also creates a registered model.
 Generated incident charts appear as run artifacts. The same environment variables must be set
 in the terminal that starts the API or runs the healing workflow.
+
+---
+
+### Phase 9 - Example Model (Fraud Detection)
+
+**Goal:** Provide a working PyTorch example that satisfies the model protocol and can be used
+with DriftRx's monitoring and self-healing components.
+
+Phase 9 supplies the concrete model adapter that earlier phases intentionally did not include.
+The detector remains model-agnostic, while this example shows how a PyTorch model can plug into
+the existing system without changing `src/` monitoring logic.
+
+**What was built:**
+
+- `example_model/model.py` - Small PyTorch binary-classification network for fraud detection.
+- `example_model/data/download.py` - Deterministic synthetic transaction data with six named
+  features and configurable drift for monitoring experiments.
+- `example_model/wrapper.py` - `MonitorableModel` adapter implementing `predict`,
+  `predict_proba`, `evaluate`, and non-mutating `retrain`. Evaluation returns the shared
+  `ModelMetrics` contract, and checkpoints can be saved and loaded.
+- `example_model/train.py` - Command-line trainer that saves a model checkpoint.
+- `api/state.py` and `api/main.py` - Load `models/fraud_model.pt` and its six-feature baseline
+  at API startup when the checkpoint is available. The API remains usable without the optional
+  checkpoint.
+- `dashboard/pages/health.py` - Displays the loaded example model name from the live API.
+- `tests/unit/test_example_model.py` - Tests data generation, protocol compliance, predictions,
+  evaluation, retraining, persistence, and checkpoint training.
+- `tests/integration/test_example_model_pipeline.py` - Verifies the example wrapper can be passed
+  into the existing `Healer` and produce a valid healing outcome.
+
+**How it integrates:**
+
+```text
+generate_fraud_data()
+  -> FraudModelWrapper
+  -> MonitorableModel.predict/evaluate/retrain
+  -> Healer champion/challenger comparison
+  -> Reporter incident charts and summary
+  -> optional MLflow metrics and model registration
+```
+
+The wrapper converts NumPy arrays into PyTorch tensors, returns binary predictions, calculates
+the shared accuracy/F1/precision/recall/loss metrics, and creates a new challenger during
+retraining. The champion is never mutated by `retrain`. Checkpoints preserve the network weights,
+input size, and training configuration so the model can be loaded later.
+
+**Train the example model:**
+
+Activate the environment selected for this project first. In a new PowerShell terminal, replace
+`modeldrift` with the exact environment name or path selected in VS Code:
+
+```powershell
+conda activate modeldrift
+python -c "import sys; print(sys.executable)"
+```
+
+The printed path must belong to the `modeldrift` environment, not the base environment. Install
+the project dependencies there so PyTorch is available:
+
+```powershell
+pip install -e ".[dev]"
+```
+
+Then train and save a checkpoint:
+
+```powershell
+python -m example_model.train --output models/fraud_model.pt
+```
+
+The generated data uses these features:
+
+```text
+transaction_amount, account_age_days, transaction_count,
+credit_score, merchant_risk, distance_from_home
+```
+
+Run the Phase 9 tests with:
+
+```powershell
+pytest -q tests/unit/test_example_model.py
+pytest -q tests/integration/test_example_model_pipeline.py
+```
+
+Both commands should run the PyTorch-specific tests instead of reporting them as skipped. If
+`import torch` fails with `WinError 1114` or a `c10.dll` error, the terminal is using a broken
+PyTorch installation. Reinstall the CPU build in the active environment:
+
+```powershell
+python -m pip uninstall torch torchvision torchaudio -y
+python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+python -c "import torch; print(torch.__version__); print(torch.rand(1))"
+```
+
+Only run the training command after that import check succeeds:
+
+```powershell
+python -m example_model.train --output models/fraud_model.pt --samples 2000 --epochs 100
+```
+
+The model is an example adapter only. The framework-agnostic monitoring code in `src/` still
+depends on the three-method `MonitorableModel` protocol rather than importing PyTorch directly.

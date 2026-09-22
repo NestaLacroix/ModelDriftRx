@@ -214,6 +214,8 @@ class TestCheckDrift:
         body = resp.json()
         assert "overall_severity" in body
         assert "triggered_healing" in body
+        assert body["healing_started"] is False
+        assert body["healing_status"] == "not_started"
         assert "feature_drifts" in body
         assert "timestamp" in body
 

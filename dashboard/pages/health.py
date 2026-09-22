@@ -35,7 +35,9 @@ def render(api_base: str) -> None:
         metric_card(
             "Model Status",
             f"{dot}{label}",
-            desc="Champion model currently serving predictions.",
+            desc=(
+                f"{health.get('model_name', 'Champion model')} currently serving predictions."
+            ),
         )
     with c2:
         bl = bool(health.get("baseline_loaded"))

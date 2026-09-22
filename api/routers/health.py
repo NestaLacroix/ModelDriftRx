@@ -26,5 +26,8 @@ def get_health(state: AppState = Depends(get_state)) -> HealthResponse:
             state.last_drift_check.isoformat() if state.last_drift_check else None
         ),
         incident_count=len(state.incidents),
+        model_name=state.model_name,
+        model_path=state.model_path,
+        feature_names=state.feature_names,
     )
 
