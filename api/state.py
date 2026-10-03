@@ -62,6 +62,9 @@ class AppState:
     # In-memory incident log.  Each entry is the dict produced by IncidentReport.to_dict().
     incidents: list[dict[str, Any]] = field(default_factory=list)
 
+    # PSI history consumed by the dashboard timeline.
+    drift_history: list[dict[str, Any]] = field(default_factory=list)
+
     # Timestamp of the most recent /check-drift call (or None if never called).
     last_drift_check: datetime | None = None
 

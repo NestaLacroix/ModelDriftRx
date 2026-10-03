@@ -11,7 +11,7 @@ import streamlit as st
 
 from dashboard.components.charts import drift_timeline_chart, psi_bar_chart
 from dashboard.components.gauges import metric_card, page_header
-from dashboard.data import build_drift_timeline, build_synthetic_drift_check
+from dashboard.data import build_drift_timeline, fetch_latest_drift_check
 
 
 def render(api_base: str) -> None:
@@ -19,17 +19,23 @@ def render(api_base: str) -> None:
 
     # --- Timeline area chart ---
     st.caption("Each line shows the PSI drift score for one feature over time. A rising line means that feature's distribution is shifting away from baseline.")
-    df = build_drift_timeline()
-    st.plotly_chart(
-        drift_timeline_chart(df),
-        use_container_width=True,
-        config={"displayModeBar": False},
-    )
+    df = build_drift_timeline(api_base)
+    if len(df) > 0:
+        st.plotly_chart(
+            drift_timeline_chart(df),
+            use_container_width=True,
+            config={"displayModeBar": False},
+        )
+    else:
+        st.info("No drift checks have been recorded yet.")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     # --- Latest check KPIs ---
-    drift = build_synthetic_drift_check()
+    drift = fetch_latest_drift_check(api_base)
+    if drift is None:
+        st.info("Run POST /check-drift to populate this view.")
+        return
     fd = drift["feature_drifts"]
 
     c1, c2, c3 = st.columns(3, gap="small")
@@ -47,9 +53,9 @@ def render(api_base: str) -> None:
         )
     with c3:
         metric_card(
-            "Healing Triggered",
-            "Yes" if drift["triggered_healing"] else "No",
-            desc="Whether the system automatically started a retraining cycle due to drift severity.",
+            "Healing Status",
+            drift.get("healing_status", "triggered" if drift["triggered_healing"] else "not_triggered").replace("_", " ").title(),
+            desc="Whether the drift threshold was crossed and whether a labeled healing cycle ran.",
         )
 
     st.markdown("<br>", unsafe_allow_html=True)

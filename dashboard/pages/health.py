@@ -11,14 +11,15 @@ import streamlit as st
 
 from dashboard.components.charts import action_donut, psi_bar_chart
 from dashboard.components.gauges import metric_card, page_header, status_dot
-from dashboard.data import build_synthetic_drift_check, fetch_health, fetch_incidents
+from dashboard.data import fetch_health, fetch_incidents, fetch_latest_drift_check
 
 
 def render(api_base: str) -> None:
     page_header("Health Overview", "Live service status, KPIs, and latest drift snapshot.")
 
     health = fetch_health(api_base)
-    incidents, _synthetic = fetch_incidents(api_base)
+    incidents, incidents_synthetic = fetch_incidents(api_base)
+    drift = fetch_latest_drift_check(api_base)
 
     if health.get("_synthetic"):
         st.info(
@@ -68,20 +69,21 @@ def render(api_base: str) -> None:
     # --- Drift snapshot + action donut ---
     col_left, col_right = st.columns([3, 2], gap="large")
 
-    drift = build_synthetic_drift_check()
-    fd = drift["feature_drifts"]
-    names  = [f["feature_name"] for f in fd]
-    scores = [f["psi_score"]    for f in fd]
-    sevs   = [f["severity"]     for f in fd]
-
     with col_left:
         st.markdown("**Latest Drift Snapshot**")
-        st.caption("PSI score per feature from the most recent drift check. Higher = more shifted from baseline.")
-        st.plotly_chart(
-            psi_bar_chart(names, scores, sevs),
-            use_container_width=True,
-            config={"displayModeBar": False},
-        )
+        if drift is None:
+            st.info("No drift checks have been recorded yet. Submit a batch to POST /check-drift.")
+        else:
+            fd = drift["feature_drifts"]
+            names = [feature["feature_name"] for feature in fd]
+            scores = [feature["psi_score"] for feature in fd]
+            severities = [feature["severity"] for feature in fd]
+            st.caption("PSI score per feature from the most recent drift check.")
+            st.plotly_chart(
+                psi_bar_chart(names, scores, severities),
+                use_container_width=True,
+                config={"displayModeBar": False},
+            )
 
     with col_right:
         st.markdown("**Healing Action Distribution**")
@@ -90,18 +92,22 @@ def render(api_base: str) -> None:
         for inc in incidents:
             action = inc.get("action", "no_action")
             counts[action] = counts.get(action, 0) + 1
-        if not counts:
+        if not counts and incidents_synthetic:
             counts = {"promote": 2, "rollback": 1, "no_action": 2}
-        st.plotly_chart(
-            action_donut(counts),
-            use_container_width=True,
-            config={"displayModeBar": False},
-        )
+        if counts:
+            st.plotly_chart(
+                action_donut(counts),
+                use_container_width=True,
+                config={"displayModeBar": False},
+            )
+        else:
+            st.info("No healing decisions have been recorded yet.")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     # --- Feature detail table ---
     st.markdown("**Feature Drift Detail**")
+    fd = drift["feature_drifts"] if drift is not None else []
     rows = [
         {
             "Feature": f["feature_name"],

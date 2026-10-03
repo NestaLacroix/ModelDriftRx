@@ -17,6 +17,7 @@ Test scope:
 from __future__ import annotations
 
 import uuid
+from collections.abc import Generator
 from typing import Any
 
 import numpy as np
@@ -45,7 +46,7 @@ def state() -> AppState:
 
 
 @pytest.fixture()
-def client(state: AppState) -> TestClient:
+def client(state: AppState) -> Generator[TestClient, None, None]:
     """TestClient wired to a blank state (no model, no baseline)."""
     app.dependency_overrides[get_state] = lambda: state
     with TestClient(app) as c:
@@ -64,7 +65,7 @@ def loaded_state() -> AppState:
 
 
 @pytest.fixture()
-def loaded_client(loaded_state: AppState) -> TestClient:
+def loaded_client(loaded_state: AppState) -> Generator[TestClient, None, None]:
     """TestClient with a FakeModel and baseline pre-loaded."""
     app.dependency_overrides[get_state] = lambda: loaded_state
     with TestClient(app) as c:
@@ -215,9 +216,53 @@ class TestCheckDrift:
         assert "overall_severity" in body
         assert "triggered_healing" in body
         assert body["healing_started"] is False
-        assert body["healing_status"] == "not_started"
+        assert body["healing_status"] == "labels_required"
         assert "feature_drifts" in body
         assert "timestamp" in body
+
+    def test_labeled_severe_drift_runs_healing_and_stores_incident(
+        self,
+        loaded_client: TestClient,
+        loaded_state: AppState,
+        monkeypatch,
+        tmp_path,
+    ) -> None:
+        import api.routers.drift as drift_router
+        from src.pipeline import run_monitoring_cycle as run_cycle
+        from src.reporter import Reporter
+
+        class NoOpTracker:
+            def log_healing(self, outcome):
+                return None
+
+            def log_incident(self, report):
+                return None
+
+        def isolated_cycle(**kwargs):
+            kwargs["reporter"] = Reporter(
+                reports_dir=str(tmp_path),
+                tracker=NoOpTracker(),
+            )
+            kwargs["tracker"] = NoOpTracker()
+            return run_cycle(**kwargs)
+
+        monkeypatch.setattr(drift_router, "run_monitoring_cycle", isolated_cycle)
+        drifted = loaded_state.baseline.copy()
+        drifted[:, 0] += 100.0
+        payload = {
+            "features": drifted.tolist(),
+            "labels": np.tile([0, 1], len(drifted) // 2).tolist(),
+        }
+
+        response = loaded_client.post("/check-drift", json=payload)
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["triggered_healing"] is True
+        assert body["healing_started"] is True
+        assert body["healing_status"] == "completed"
+        assert body["incident_id"] == loaded_state.incidents[0]["id"]
+        assert body["action"] in {"promote", "rollback", "no_action"}
 
     def test_drift_feature_count_matches(self, loaded_client: TestClient, loaded_state: AppState) -> None:
         payload = {"features": loaded_state.baseline[:10].tolist()}
@@ -310,6 +355,23 @@ class TestIncidents:
         resp = client.get("/incidents")
         assert resp.status_code == 200
         assert resp.json() == []
+
+    def test_drift_history_returns_recorded_checks(self, state: AppState, client: TestClient) -> None:
+        state.drift_history.append(
+            {
+                "timestamp": "2026-09-22T12:00:00+00:00",
+                "overall_severity": "low",
+                "triggered_healing": False,
+                "healing_started": False,
+                "healing_status": "not_triggered",
+                "feature_drifts": [],
+            }
+        )
+
+        response = client.get("/drift-history")
+
+        assert response.status_code == 200
+        assert response.json()[0]["overall_severity"] == "low"
 
     def test_incidents_returns_all_entries(self, state: AppState, client: TestClient) -> None:
         state.incidents.append(_make_incident_dict(action="promote"))

@@ -365,3 +365,52 @@ python -m example_model.train --output models/fraud_model.pt --samples 2000 --ep
 
 The model is an example adapter only. The framework-agnostic monitoring code in `src/` still
 depends on the three-method `MonitorableModel` protocol rather than importing PyTorch directly.
+
+---
+
+### Phase 10 - Simulation and End-to-End Monitoring
+
+**Goal:** Exercise and connect the lifecycle from generated drift through diagnosis, supervised
+healing, incident reporting, API storage, dashboard views, and optional MLflow tracking.
+
+**What was built:**
+
+- `simulation/generate_data.py` - Produces reproducible baseline and shifted fraud datasets with
+  the same six feature columns and aligned labels.
+- `src/pipeline.py` - Runs diagnosis, splits labeled incoming data into training/holdout sets,
+  calls the existing healer, adapts the result to shared contracts, and creates a Reporter
+  incident. A promoted challenger becomes the returned champion.
+- `simulation/run_simulation.py` - Trains a fresh champion on baseline data, injects drift,
+  detects it, runs the monitoring cycle, writes chart files and `simulation_result.json`, and
+  appends incident JSON. Optional arguments control sample count, epochs, drift size, paths, and
+  checkpoint saving.
+- `POST /check-drift` - Detection-only requests still work. If drift crosses the threshold and
+  binary labels are supplied for every incoming row, the API runs the monitoring cycle, stores
+  the incident, and updates its in-memory champion. Responses report `healing_started`,
+  `healing_status`, `action`, `incident_id`, and `mlflow_run_id`. Without labels,
+  `healing_status` is `labels_required` and no retraining occurs.
+- `GET /drift-history` - Returns recorded checks for the live dashboard timeline.
+- Dashboard Health, Drift Timeline, and Champion vs Challenger pages use real API status,
+  history, and incident outcomes. A live API with no records shows empty states; synthetic
+  samples are only used when the API is offline.
+- Tests cover reproducible data, drift/no-drift simulation, the shared cycle, labeled API
+  healing, history responses, and dashboard data mapping.
+
+**Run the standalone simulation:**
+
+In the `modeldrift` environment:
+
+```powershell
+python -m simulation.run_simulation --samples 600 --epochs 25 --drift-amount 1.0
+```
+
+The console prints drift severity, healing decision, incident ID, and MLflow run ID when
+available. Output is written under `reports/`; the default incident log is
+`reports/incidents.json`. `make demo` runs the simulation with default settings.
+
+**Run the full API-to-dashboard cycle:**
+
+Start MLflow, API, and dashboard as described in the local run guide. Then submit features and
+matching binary labels to `POST /check-drift`. When drift is severe, the response indicates that
+healing completed, and the new incident appears in the dashboard's incident count, action chart,
+timeline, and champion/challenger page. Without labels, only detection runs.

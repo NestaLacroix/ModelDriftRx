@@ -59,6 +59,13 @@ class DriftCheckRequest(BaseModel):
         default=None,
         description="Column names.  Falls back to app.state.feature_names if omitted.",
     )
+    labels: list[int] | None = Field(
+        default=None,
+        description=(
+            "Optional binary labels aligned with features. Required to run the "
+            "diagnosis, retraining, and reporting cycle."
+        ),
+    )
 
 
 class FeatureDriftOut(BaseModel):
@@ -76,7 +83,19 @@ class DriftCheckResponse(BaseModel):
     overall_severity: str
     triggered_healing: bool  # Drift crossed the configured healing threshold.
     healing_started: bool    # True only when the Healer has actually been called.
-    healing_status: str      # "not_started" until orchestration is connected.
+    healing_status: str      # "completed", "labels_required", or "not_triggered".
+    incident_id: str | None = None
+    action: str | None = None
+    mlflow_run_id: str | None = None
+    feature_drifts: list[FeatureDriftOut]
+
+
+class DriftHistoryEntry(BaseModel):
+    timestamp: str
+    overall_severity: str
+    triggered_healing: bool
+    healing_started: bool
+    healing_status: str
     feature_drifts: list[FeatureDriftOut]
 
 

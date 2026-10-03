@@ -93,11 +93,11 @@ run-mlflow:
 demo:
 	@echo "   Starting AutoPilot ML demo..."
 	@echo "   This will:"
-	@echo "   1. Train the example model"
-	@echo "   2. Inject drift into the data"
-	@echo "   3. Watch the system detect, diagnose, heal, and report"
+	@echo "   1. Generate clean and drifted fraud data"
+	@echo "   2. Train an example champion model"
+	@echo "   3. Detect drift, diagnose, heal, and report"
 	@echo ""
-	python simulation/run_simulation.py
+	python -m simulation.run_simulation
 
 # ================================ Docker ====================================
 

@@ -10,7 +10,7 @@ import streamlit as st
 
 from dashboard.components.charts import champion_challenger_chart
 from dashboard.components.gauges import metric_card, page_header, severity_badge
-from dashboard.data import build_synthetic_champ_vs_chall
+from dashboard.data import fetch_champ_vs_chall
 
 
 def render(api_base: str) -> None:
@@ -19,7 +19,10 @@ def render(api_base: str) -> None:
         "Latest retraining outcome and metric comparison.",
     )
 
-    data = build_synthetic_champ_vs_chall()
+    data = fetch_champ_vs_chall(api_base)
+    if data is None:
+        st.info("No healing comparisons have been recorded yet. Submit a drift check with labels.")
+        return
 
     # --- Outcome summary ---
     c1, c2 = st.columns(2, gap="small")

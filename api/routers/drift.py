@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from api.schemas import DriftCheckRequest, DriftCheckResponse, FeatureDriftOut
 from api.state import AppState, get_state
 from src.detector import DriftDetector
+from src.pipeline import run_monitoring_cycle
 
 router = APIRouter()
 
@@ -79,11 +80,69 @@ def check_drift(
         for fd in report.feature_drifts
     ]
 
+    healing_started = False
+    healing_status = "not_triggered"
+    incident_id = None
+    action = None
+    mlflow_run_id = None
+
+    if report.triggered_healing:
+        if request.labels is None:
+            healing_status = "labels_required"
+        elif state.model is None:
+            healing_status = "model_required"
+        else:
+            labels = np.asarray(request.labels, dtype=int)
+            if labels.ndim != 1 or labels.shape[0] != incoming.shape[0]:
+                raise HTTPException(
+                    status_code=422,
+                    detail="labels must contain one binary label per feature row.",
+                )
+            if not np.all(np.isin(labels, [0, 1])):
+                raise HTTPException(
+                    status_code=422,
+                    detail="labels must contain only 0 and 1.",
+                )
+            try:
+                cycle = run_monitoring_cycle(
+                    drift_report=report,
+                    champion_model=state.model,
+                    baseline=state.baseline,
+                    incoming=incoming,
+                    labels=labels,
+                    feature_names=feature_names or detector.feature_names,
+                )
+            except (ValueError, TypeError, AttributeError) as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+            state.model = cycle.champion_model
+            state.incidents.append(cycle.incident.to_dict())
+            healing_started = True
+            healing_status = "completed"
+            incident_id = cycle.incident.id
+            action = cycle.healing_outcome.action.value
+            mlflow_run_id = cycle.incident.mlflow_run_id
+
+    history_entry = {
+        "timestamp": report.timestamp.isoformat(),
+        "feature_drifts": [fd.to_dict() for fd in report.feature_drifts],
+        "overall_severity": report.overall_severity.value,
+        "triggered_healing": report.triggered_healing,
+        "healing_started": healing_started,
+        "healing_status": healing_status,
+        "incident_id": incident_id,
+        "action": action,
+    }
+    state.drift_history.append(history_entry)
+
     return DriftCheckResponse(
         timestamp=report.timestamp.isoformat(),
         overall_severity=report.overall_severity.value,
         triggered_healing=report.triggered_healing,
-        healing_started=False,
-        healing_status="not_started",
+        healing_started=healing_started,
+        healing_status=healing_status,
+        incident_id=incident_id,
+        action=action,
+        mlflow_run_id=mlflow_run_id,
         feature_drifts=feature_drifts_out,
     )

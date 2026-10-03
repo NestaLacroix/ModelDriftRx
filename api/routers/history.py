@@ -11,10 +11,16 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from api.schemas import IncidentDetail, IncidentSummary
+from api.schemas import DriftHistoryEntry, IncidentDetail, IncidentSummary
 from api.state import AppState, get_state
 
 router = APIRouter()
+
+
+@router.get("/drift-history", response_model=list[DriftHistoryEntry])
+def list_drift_history(state: AppState = Depends(get_state)) -> list[DriftHistoryEntry]:
+    """Return recorded drift checks, newest first."""
+    return [DriftHistoryEntry(**entry) for entry in reversed(state.drift_history)]
 
 
 @router.get("/incidents", response_model=list[IncidentSummary])
